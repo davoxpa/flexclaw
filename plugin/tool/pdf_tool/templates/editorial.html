@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page { size: A4; margin: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', Times, serif;
+      font-size: 10.5pt;
+      line-height: 1.75;
+      color: #1a1a1a;
+      background: #faf9f6;
+    }
+
+    /* ── Copertina ───────────────────────────────────────────── */
+    .cover {
+      background: #faf9f6;
+      border-bottom: 3px double #1a1a1a;
+      padding: 55px 60px 44px;
+      text-align: center;
+    }
+    .cover-meta {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 22px;
+    }
+    .cover h1 {
+      font-size: 28pt;
+      font-weight: 700;
+      font-style: italic;
+      color: #1a1a1a;
+      line-height: 1.15;
+    }
+    .cover-rule {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 22px;
+      justify-content: center;
+    }
+    .cover-rule::before,
+    .cover-rule::after {
+      content: '';
+      flex: 0 0 70px;
+      height: 1px;
+      background: #1a1a1a;
+    }
+    .cover-rule span { font-size: 14pt; color: #1a1a1a; }
+
+    /* ── Contenuto ───────────────────────────────────────────── */
+    .content { padding: 42px 60px; }
+
+    h2 {
+      font-size: 13.5pt;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-top: 30px;
+      margin-bottom: 10px;
+      text-align: center;
+      padding-top: 12px;
+      border-top: 2px solid #1a1a1a;
+    }
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #333;
+      margin-top: 18px;
+      margin-bottom: 7px;
+    }
+    p {
+      margin-bottom: 13px;
+      text-align: justify;
+      hyphens: auto;
+    }
+    /* Drop cap sul primo paragrafo del contenuto */
+    .content > p:first-of-type::first-letter {
+      font-size: 42pt;
+      font-weight: 700;
+      float: left;
+      line-height: 0.8;
+      margin-right: 7px;
+      margin-top: 5px;
+      color: #1a1a1a;
+    }
+
+    ul, ol { margin: 10px 0 12px 26px; }
+    li { margin-bottom: 5px; }
+
+    blockquote {
+      margin: 20px 30px;
+      padding: 0 20px;
+      border-left: 3px solid #1a1a1a;
+      font-style: italic;
+      font-size: 11pt;
+      color: #444;
+    }
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 9pt;
+      background: #ede9e2;
+      padding: 1px 4px;
+    }
+    pre {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 9pt;
+      background: #ede9e2;
+      padding: 14px 16px;
+      margin: 12px 0;
+      white-space: pre-wrap;
+    }
+    hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
+    a { color: #1a1a1a; text-decoration: underline; }
+    strong { font-weight: 700; }
+    em { font-style: italic; }
+
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 9.5pt; }
+    th { border-bottom: 2px solid #1a1a1a; padding: 6px 10px; text-align: left; font-weight: 700; }
+    td { padding: 6px 10px; border-bottom: 1px solid #ccc; }
+
+    .footer {
+      margin-top: 38px;
+      padding-top: 12px;
+      border-top: 1px solid #ccc;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #aaa;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <div class="cover-meta">FlexClaw &nbsp;·&nbsp; Articolo</div>
+    <h1>__TITLE__</h1>
+    <div class="cover-rule"><span>✦</span></div>
+  </div>
+  <div class="content">
+    __BODY_HTML__
+    <div class="footer">— Generato da FlexClaw AI —</div>
+  </div>
+</body>
+</html>

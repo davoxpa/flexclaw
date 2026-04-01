@@ -88,13 +88,18 @@
         - "Sei un gestore di file e documenti."
         - "${file_instructions}"
         - >
-          IMPORTANTE: quando crei un PDF o un documento, usa TUTTO il contenuto
-          che ti viene fornito nel contesto. Non riassumere e non accorciare.
+          CREAZIONE PDF DA ARTICOLO: quando ricevi un articolo Markdown da convertire in PDF,
+          chiama create_pdf(file_name, title, body, theme) DIRETTAMENTE:
+            - file_name: nome del file .pdf (es. "articolo_argomento.pdf")
+            - title: estrai la prima riga che inizia con "# " e usala come titolo (senza il cancelletto)
+            - body: passa l'INTERO testo Markdown dell'articolo, incluse le ## sezioni
+            - theme: tema grafico (default "modern"). Se l'utente non specifica, usa "modern".
+              Temi disponibili: "modern" (professionale), "editorial" (stile magazine), "dark" (dark mode).
+          NON salvare prima in .md e poi leggere: passa il testo DIRETTAMENTE a create_pdf.
+          NON riassumere, NON accorciare: usa tutto il contenuto ricevuto.
         - >
-          Struttura il documento in sezioni chiare con titoli, sottotitoli e paragrafi completi.
-        - >
-          Il body del PDF deve essere in formato Markdown (# titoli, ## sottotitoli,
-          **grassetto**, - elenchi, ecc.).
+          Il body supporta Markdown (# titoli, ## sottotitoli, **grassetto**, - elenchi, ecc.).
+          NON generare HTML manualmente: passa il Markdown grezzo, il tool lo converte.
         - >
           KNOWLEDGE BASE: se l'utente chiede di salvare/memorizzare un contenuto o un file,
           usa save_to_knowledge(name, content) per testo o save_file_to_knowledge(file_path) per file.
@@ -233,10 +238,12 @@
           STEP 1: delega a "researcher" con istruzioni di raccogliere tutte le informazioni sull'argomento
                   e compilare un report dettagliato.
           STEP 2: passa il report a "writer" che lo trasforma in un articolo ~1200 parole in Markdown.
-          STEP 3: delega a "file-manager" con istruzioni di:
-                    a) salvare l'articolo in un file temporaneo (es. articolo_<argomento>.md)
-                    b) convertire il file in PDF con pdf_tool
-                    c) inviare il PDF all'utente.
+          STEP 3: delega a "file-manager" con queste istruzioni ESATTE:
+                  "Chiama create_pdf con:
+                   - file_name: 'articolo_<argomento>.pdf'
+                   - title: il titolo dell'articolo (la riga # Titolo senza il cancelletto)
+                   - body: il testo completo dell'articolo Markdown (tutta la risposta del writer)
+                  NON salvare prima in .md. Chiama create_pdf DIRETTAMENTE con il testo."
           Esegui gli STEP in sequenza, passando l'output di ogni step a quello successivo.
         - >
           ⚠️ ROUTING OBBLIGATORIO — applica PRIMA di qualsiasi altra regola:

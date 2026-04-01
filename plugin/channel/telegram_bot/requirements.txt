@@ -1,4 +1,6 @@
-# Dipendenze specifiche del plugin telegram_bot.
-# Installare con: uv pip install -r requirements.txt
+# Dipendenze del plugin telegram_bot.
+# Ogni plugin deve dichiarare TUTTE le sue dipendenze, anche se già presenti nel progetto.
+# Il loader le installa/verifica automaticamente all'avvio.
+agno>=2.5.11
 python-telegram-bot>=21.0
 pyyaml>=6.0.3

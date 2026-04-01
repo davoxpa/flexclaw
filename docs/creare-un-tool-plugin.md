@@ -100,14 +100,18 @@ Le `agent_instructions` di tutti i tool abilitati vengono aggregate e iniettate 
 
 ## 4. Aggiungi le dipendenze
 
-Se il tool usa librerie esterne, crea `requirements.txt`:
+Crea `requirements.txt` con **tutte** le librerie di cui il plugin ha bisogno,
+anche se sono già presenti nel progetto principale. Ogni plugin deve essere
+auto-sufficiente e dichiarare esplicitamente le proprie dipendenze:
 
 ```text
-fpdf2>=2.8.3
+agno>=2.5.11
 markdown>=3.7
+requests>=2.32
 ```
 
-Il loader installa automaticamente le dipendenze all'avvio con `uv pip` (o `pip` come fallback). Se il file non esiste viene ignorato.
+Il loader verifica e installa automaticamente le dipendenze all'avvio con
+`uv pip` (o `pip` come fallback). Se il file non esiste viene ignorato.
 
 ## 5. Abilita il plugin
 

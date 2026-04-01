@@ -178,14 +178,18 @@ I handler usano il core del framework:
 
 ## 6. Aggiungi le dipendenze
 
-Crea `requirements.txt` se servono librerie esterne:
+Crea `requirements.txt` con **tutte** le librerie di cui il plugin ha bisogno,
+anche se sono già presenti nel progetto principale. Ogni plugin deve essere
+auto-sufficiente e dichiarare esplicitamente le proprie dipendenze:
 
 ```text
+agno>=2.5.11
 aiohttp>=3.9
 pyyaml>=6.0
 ```
 
-Il loader le installa automaticamente all'avvio.
+Il loader verifica e installa automaticamente le dipendenze all'avvio con
+`uv pip` (o `pip` come fallback).
 
 ## 7. Abilita il plugin
 
