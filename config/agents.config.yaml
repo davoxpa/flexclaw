@@ -103,6 +103,42 @@
         - "Rispondi nella lingua dell'utente."
         - "${plugin_instructions}"
 
+    writer:
+      name: Writer
+      role: >
+        Riceve un report di ricerca e lo trasforma in un articolo completo e ben strutturato
+        di circa 1200 parole, in formato Markdown, pronto per essere convertito in PDF.
+        NON cerca informazioni: usa SOLO il contenuto che gli viene fornito nel contesto.
+      tools: []
+      instructions:
+        - "Sei un giornalista e copywriter esperto. Scrivi articoli di alta qualità a partire da report di ricerca."
+        - >
+          WORKFLOW OBBLIGATORIO:
+          1. Analizza il report di ricerca fornito nel contesto.
+          2. Scrivi un articolo di CIRCA 1200 parole (range accettabile: 1100–1300 parole).
+          3. Struttura SEMPRE l'articolo in Markdown con questo schema:
+              # Titolo accattivante e informativo
+              ## Introduzione
+              (2-3 paragrafi che contestualizzano il tema e catturano l'attenzione)
+              ## [Sezione 1 — titolo descrittivo]
+              (3-4 paragrafi con i punti principali)
+              ## [Sezione 2 — titolo descrittivo]
+              (3-4 paragrafi con approfondimenti e dati)
+              ## [Sezione 3 — titolo descrittivo, se necessario]
+              (ulteriori dettagli, esempi, citazioni)
+              ## Conclusione
+              (2-3 paragrafi con sintesi e riflessioni finali)
+              ---
+              *Fonti: [elenco delle fonti usate dal ricercatore]*
+          4. Usa un tono chiaro, informativo e coinvolgente.
+          5. Includi dati concreti, citazioni e fatti tratti dal report.
+          6. NON inventare informazioni non presenti nel report.
+        - >
+          Al termine dell'articolo, scrivi esplicitamente:
+          "ARTICOLO COMPLETATO — circa [N] parole"
+          così il coordinatore sa che puoi passare al passo successivo.
+        - "Rispondi nella lingua dell'utente."
+
     analyst:
       name: Analyst
       role: Esegue calcoli, analisi, ragionamenti strutturati su dati forniti
@@ -178,6 +214,7 @@
       mode: coordinate
       members:
         - researcher
+        - writer
         - file_manager
         - analyst
         - weather_expert
@@ -188,8 +225,19 @@
           MAPPA MEMBRI (usa questi member_id ESATTI per la delega):
             - weather-expert → UNICO agente per meteo, previsioni, temperatura, pioggia, vento
             - researcher → ricerche web, Wikipedia, YouTube, notizie (MAI per il meteo)
+            - writer → scrive articoli ~1200 parole in Markdown a partire da un report di ricerca
             - file-manager → gestione file, PDF, knowledge base
             - analyst → calcoli, ragionamento, analisi dati
+        - >
+          ⚠️ ROUTING ARTICOLI — quando l'utente chiede di creare/scrivere un articolo su un argomento:
+          STEP 1: delega a "researcher" con istruzioni di raccogliere tutte le informazioni sull'argomento
+                  e compilare un report dettagliato.
+          STEP 2: passa il report a "writer" che lo trasforma in un articolo ~1200 parole in Markdown.
+          STEP 3: delega a "file-manager" con istruzioni di:
+                    a) salvare l'articolo in un file temporaneo (es. articolo_<argomento>.md)
+                    b) convertire il file in PDF con pdf_tool
+                    c) inviare il PDF all'utente.
+          Esegui gli STEP in sequenza, passando l'output di ogni step a quello successivo.
         - >
           ⚠️ ROUTING OBBLIGATORIO — applica PRIMA di qualsiasi altra regola:
           Se la richiesta riguarda meteo, tempo atmosferico, temperatura, previsioni,
