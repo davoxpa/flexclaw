@@ -1,0 +1,113 @@
+channel:
+- id: telegram_bot
+  status: enabled
+
+# ── Tool ─────────────────────────────────────────────────────────────────────
+# Tool custom (con codice in plugin/tool/<id>/) → solo id e status.
+# Tool SDK Agno (senza cartella) → config inline con class, toolkit_name, params.
+#
+# toolkit_name: nome con cui gli agenti referenziano il tool in agents.config.yaml.
+#   Se omesso, viene usato il name del Toolkit dalla classe Agno.
+# params: parametri passati al costruttore. Supporta ${sandbox_dir} da main.config.yaml.
+
+tool:
+# ── Tool custom (con cartella plugin/tool/<id>/) ──────────────────────────
+- id: pdf_tool
+  status: enabled
+- id: knowledge_tool
+  status: enabled
+  special: true
+- id: weather_tool
+  status: enabled
+
+# ── Tool SDK Agno (config inline, nessuna cartella) ──────────────────────
+- id: websearch_tool
+  status: enabled
+  toolkit_name: websearch
+  class: agno.tools.websearch.WebSearchTools
+  agent_instructions: |
+    Hai accesso alla ricerca web. Usa web_search(query) per cercare informazioni aggiornate.
+
+- id: filesystem_tool
+  status: enabled
+  toolkit_name: local_file_system
+  class: agno.tools.local_file_system.LocalFileSystemTools
+  params:
+    target_directory: "${sandbox_dir}"
+
+- id: filetools_tool
+  status: enabled
+  toolkit_name: file_tools
+  class: agno.tools.file.FileTools
+  params:
+    base_dir: "${sandbox_dir}"
+
+- id: calculator_tool
+  status: enabled
+  toolkit_name: calculator
+  class: agno.tools.calculator.CalculatorTools
+  agent_instructions: |
+    Hai a disposizione un calcolatore matematico. Usalo per:
+    - Calcoli aritmetici (add, subtract, multiply, divide)
+    - Potenze (exponentiate), fattoriali (factorial), radici quadrate (square_root)
+    - Verificare se un numero è primo (is_prime)
+    NON provare a fare calcoli mentalmente: usa SEMPRE il tool per garantire precisione.
+
+- id: wikipedia_tool
+  status: enabled
+  toolkit_name: wikipedia_tools
+  class: agno.tools.wikipedia.WikipediaTools
+  agent_instructions: |
+    Hai accesso a Wikipedia per cercare informazioni enciclopediche.
+    Usa search_wikipedia(query) per ottenere informazioni su persone, luoghi,
+    eventi storici, concetti scientifici e qualsiasi argomento enciclopedico.
+
+- id: youtube_tool
+  status: enabled
+  toolkit_name: youtube_tools
+  class: agno.tools.youtube.YouTubeTools
+  agent_instructions: |
+    Hai accesso a YouTube per analizzare video.
+    Usa get_youtube_video_captions(url) per ottenere la trascrizione di un video.
+    Usa get_youtube_video_data(url) per ottenere titolo, descrizione e metadati.
+
+- id: newspaper4k_tool
+  status: enabled
+  toolkit_name: newspaper4k_tools
+  class: agno.tools.newspaper4k.Newspaper4kTools
+  agent_instructions: |
+    Hai accesso a Newspaper4k per estrarre il testo di articoli web.
+    Usa read_article(url) quando l'utente ti fornisce un link a un articolo.
+
+- id: webtools_tool
+  status: enabled
+  toolkit_name: web_tools
+  class: agno.tools.webtools.WebTools
+  agent_instructions: |
+    Hai a disposizione expand_url per espandere URL accorciati (es. bit.ly, t.co).
+
+- id: hackernews_tool
+  status: enabled
+  toolkit_name: hackers_news
+  class: agno.tools.hackernews.HackerNewsTools
+  agent_instructions: |
+    Hai strumenti per Hacker News:
+    - get_top_hackernews_stories: recupera le top story (default 10)
+    - get_user_details: dettagli utente HN dato il suo username
+
+- id: reasoning_tool
+  status: enabled
+  toolkit_name: reasoning_tools
+  class: agno.tools.reasoning.ReasoningTools
+  agent_instructions: |
+    Hai strumenti di ragionamento strutturato:
+    - think: ragionamento passo-passo su un problema
+    - analyze: analisi dettagliata con passaggi strutturati
+
+- id: crawl4ai_tool
+  status: enabled
+  toolkit_name: crawl4ai_tools
+  class: agno.tools.crawl4ai.Crawl4aiTools
+  agent_instructions: |
+    Hai accesso a Crawl4AI per web crawling con browser headless.
+    Usa web_crawler(url) quando read_article(url) fallisce (Cloudflare, siti protetti).

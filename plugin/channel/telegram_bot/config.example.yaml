@@ -1,0 +1,37 @@
+id: "telegram_bot"
+name: "Telegram Bot"
+description: "Un plugin per integrare un bot Telegram con AgentOS, permettendo agli utenti di interagire con gli agenti tramite messaggi e comandi Telegram."
+version: "0.1.0"
+author: "Davide Salvato"
+# Configurazione plugin Telegram
+telegram:
+  # ID Telegram dell'admin (può usare comandi privilegiati)
+  # Recuperabile con @userinfobot su Telegram
+  admin_user_id: 123456789
+
+  # Utenti autorizzati a interagire col bot:
+  #   "*"            → tutti gli utenti possono usare il bot
+  #   [123, 456]     → solo gli user_id Telegram indicati
+  allowed_users: [123456789]
+
+  # Modalità di ricezione aggiornamenti:
+  #   "polling"  → interroga i server Telegram periodicamente (dev)
+  #   "webhook"  → riceve push da Telegram su un URL pubblico (prod)
+  mode: "polling"
+
+  # Configurazione webhook (usata solo se mode = "webhook")
+  webhook:
+    # URL pubblico raggiungibile da Telegram (es. https://example.com/telegram/webhook)
+    url: null
+    # Porta locale su cui ascoltare il webhook
+    port: 8443
+
+  # Modalità di risposta nei gruppi:
+  #   "all"      → risponde a tutti i messaggi
+  #   "mention"  → risponde solo quando viene citato con @nomebot
+  reply_mode: "mention"
+
+  # Mostra un messaggio con gli step dei tool in tempo reale
+  #   true  → invia un messaggio aggiornato live con i tool eseguiti
+  #   false → invia solo la risposta finale
+  show_tool_steps: true

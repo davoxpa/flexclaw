@@ -1,0 +1,4 @@
+# Dipendenze specifiche del plugin telegram_bot.
+# Installare con: uv pip install -r requirements.txt
+python-telegram-bot>=21.0
+pyyaml>=6.0.3

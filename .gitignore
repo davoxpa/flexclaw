@@ -1,0 +1,34 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# File ambiente e segreti locali
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Dati runtime (database e vector store)
+data/db/*.db
+data/chromadb/
+data/state.yaml
+
+# Log
+data/logs/
+
+# File generati nella sandbox
+sandbox/*
+!sandbox/.gitkeep
+
+# macOS
+.DS_Store
+
+# Configurazioni locali dei plugin (contengono dati personali)
+plugin/**/config.yaml

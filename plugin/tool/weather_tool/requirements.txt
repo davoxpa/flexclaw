@@ -1,0 +1,5 @@
+# Dipendenze specifiche del plugin weather_tool.
+# Installare con: uv pip install -r requirements.txt
+# Nota: dopo l'installazione eseguire "playwright install chromium" per il browser headless.
+agno>=2.5.11
+playwright>=1.40.0

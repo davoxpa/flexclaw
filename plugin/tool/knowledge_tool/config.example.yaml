@@ -1,0 +1,10 @@
+# ── Knowledge Tool ────────────────────────────────────────────────────────────
+# Per abilitare questo tool, copiare il blocco seguente dentro config/plugin.config.yaml
+# nella sezione "tool:", tra i tool custom.
+#
+# Il flag "special: true" indica che il tool è gestito direttamente da agent_os
+# (richiede l'iniezione dell'istanza Knowledge) e non viene caricato dal loader generico.
+
+- id: knowledge_tool
+  status: enabled
+  special: true

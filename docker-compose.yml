@@ -1,0 +1,56 @@
+# ── FlexClaw3 — Docker Compose ───────────────────────────────────────────────
+# Deploy completo con volumi per config, dati e variabili d'ambiente.
+#
+# Avvio:
+#   docker compose up -d --build
+#
+# Le configurazioni YAML e il file .env sono montati come volumi:
+# puoi modificarli dall'host senza ricostruire l'immagine.
+# Dopo aver modificato un config, basta riavviare il container:
+#   docker compose restart flexclaw
+
+services:
+  flexclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flexclaw
+    restart: unless-stopped
+
+    # Variabili d'ambiente dal file .env nella root del progetto
+    env_file:
+      - .env
+
+    ports:
+      - "${AGENT_OS_PORT:-7777}:7777"
+
+    volumes:
+      # ── Config modificabili dall'host (mount singoli file) ─────────
+      - ./config/main.config.yaml:/app/config/main.config.yaml:ro
+      - ./config/agents.config.yaml:/app/config/agents.config.yaml:ro
+      - ./config/plugin.config.yaml:/app/config/plugin.config.yaml:ro
+
+      # ── Config Telegram (token e opzioni bot) ──────────────────────
+      - ./plugin/channel/telegram_bot/config.yaml:/app/plugin/channel/telegram_bot/config.yaml:ro
+
+      # ── Dati persistenti (DB, knowledge base, log, sandbox) ────────
+      - flexclaw-data:/app/data
+      - flexclaw-sandbox:/app/sandbox
+
+    # Limite risorse (Playwright + Chromium usa RAM)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  flexclaw-data:
+    driver: local
+  flexclaw-sandbox:
+    driver: local

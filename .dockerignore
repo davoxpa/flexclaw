@@ -1,0 +1,23 @@
+# Virtualenv e cache Python
+.venv/
+__pycache__/
+*.pyc
+
+# Dati locali (montati come volumi)
+data/
+sandbox/
+
+# File sensibili
+.env
+
+# IDE e OS
+.git/
+.github/
+.vscode/
+.DS_Store
+*.swp
+
+# Documentazione e sandbox
+docs/
+Roadmap.md
+README.md

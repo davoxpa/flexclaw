@@ -1,0 +1,57 @@
+# Directory di lavoro per file degli agenti (usata da builtin_tools e plugin custom)
+sandbox_dir: "sandbox"
+
+# Modelli disponibili selezionabili a runtime via /model
+# Il primo della lista viene usato come default se nessun modello è stato selezionato
+models:
+  - "openrouter:openai/gpt-4o"
+  - "openrouter:openai/gpt-4o-mini"
+  - "openrouter:google/gemini-3-flash-preview"
+  - "openai:gpt-4o"
+  - "google:gemini-2.0-flash"
+
+# Parametri di default applicati a tutti i modelli
+model_defaults:
+  max_tokens: 16384
+
+# Tool disponibili nel Registry
+tools:
+  - websearch
+  - hackernews
+  - pubmed
+  - wikipedia
+  - crawl4ai
+  - website
+  # - mcp_toolbox  # richiede url, configurare come: {mcp_toolbox: {url: "http://..."}}
+  - calculator
+  - file
+  - local_file_system
+
+# Embedder utilizzato da ChromaDB per la knowledge base
+embedder:
+  provider: "openrouter"
+  model: "openai/text-embedding-3-small"
+
+# Memoria vettoriale (ChromaDB)
+knowledge:
+  chromadb:
+    collection: "flexclaw_knowledge"
+    path: "data/chromadb"
+
+# Storage sessioni e persistenza
+database:
+  agent_os:
+    driver: sqlite
+    db_file: "data/db/agent_os.db"
+
+# Quick prompts per la Chat UI di AgentOS Studio
+chat:
+  quick_prompts:
+    Web Search:
+      - "Cerca le ultime notizie su AI"
+      - "Trova informazioni su questo argomento"
+      - "Cosa sta succedendo nel mondo tech?"
+    System Manager:
+      - "Elenca i file disponibili"
+      - "Leggi il contenuto di un file"
+      - "Organizza i file nel progetto"

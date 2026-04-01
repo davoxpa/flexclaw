@@ -1,0 +1,6 @@
+# ── PDF Tool ──────────────────────────────────────────────────────────────────
+# Per abilitare questo tool, copiare il blocco seguente dentro config/plugin.config.yaml
+# nella sezione "tool:", tra i tool custom.
+
+- id: pdf_tool
+  status: enabled
