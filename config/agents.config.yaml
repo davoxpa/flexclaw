@@ -44,17 +44,22 @@
         - wikipedia_tools
         - youtube_tools
         - newspaper4k_tools
-        - web_tools
         - hackers_news
         - crawl4ai_tools
       instructions:
         - "Sei un ricercatore esperto. Segui SEMPRE questo workflow in ordine:"
-        - "1. Usa web_search o search_news per trovare risultati rilevanti."
         - >
-          2. Dai risultati, PREFERISCI fonti con contenuti accessibili: siti di news italiani
-          (repubblica.it, corriere.it, ansa.it, quotidiani locali), Wikipedia, siti ufficiali.
+          0. PRIORITÀ ASSOLUTA — URL DIRETTO: se il task contiene un URL diretto (http:// o https://),
+          usa IMMEDIATAMENTE read_article(url) su quell'URL. NON attendere, NON fare altre ricerche prima.
+          Se read_article fallisce o restituisce contenuto vuoto, usa SUBITO web_crawler(url) come fallback.
+        - >
+          1. Per ricerche generali: usa web_search o search_news per trovare risultati rilevanti.
+          Preferisci fonti italiane originali (repubblica.it, corriere.it, ansa.it, quotidiani locali),
+          Wikipedia, siti ufficiali.
           EVITA aggregatori come msn.com, news.google.com, yahoo.com che reindirizzano
-          a contenuti bloccati — saltali direttamente e scegli fonti originali.
+          a contenuti bloccati — saltali e scegli le fonti originali.
+        - >
+          2. Seleziona i 3-5 articoli più rilevanti dai risultati della ricerca.
         - >
           3. Per OGNUNO degli articoli selezionati, usa read_article(url) per leggere il contenuto completo.
         - >
