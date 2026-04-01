@@ -1,5 +1,6 @@
 import logging
 import mimetypes
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime
@@ -123,8 +124,13 @@ async def send_message(
     session_id: str = "flexclaw_session",
 ) -> ChatResult:
     """Invia testo e/o file al team e restituisce la risposta."""
-    logger.info("send_message(user=%s, session=%s, files=%d)", user_id, session_id, len(file_paths or []))
-    logger.debug("Messaggio: %s", message)
+    logger.info(
+        "send_message(user=%s, session=%s, files=%d)",
+        user_id, session_id, len(file_paths or []),
+    )
+    if file_paths:
+        logger.debug("File allegati: %s", [str(p) for p in file_paths])
+    logger.debug("Messaggio: %.200s", message)
     images, audios, videos, documents = _prepare_media(file_paths or [])
 
     text_input = message or ""
@@ -135,6 +141,7 @@ async def send_message(
     now = datetime.now().strftime("%d/%m/%Y, ore %H:%M")
     text_input = f"[Data e ora corrente: {now}]\n{text_input}"
 
+    t0 = time.monotonic()
     run_output = await flexclaw_team.arun(
         input=text_input,
         user_id=user_id,
@@ -144,6 +151,10 @@ async def send_message(
         videos=videos or None,
         files=documents or None,
     )
+
+    elapsed = time.monotonic() - t0
+    result_len = len(str(run_output.content)) if run_output.content else 0
+    logger.info("send_message completato in %.1fs. Risposta: %d caratteri", elapsed, result_len)
 
     return ChatResult(
         content=str(run_output.content) if run_output.content else None,
@@ -159,8 +170,13 @@ async def stream_message(
     session_id: str = "flexclaw_session",
 ) -> AsyncIterator[Union[RunOutputEvent, TeamRunOutputEvent]]:
     """Invia testo e/o file al team in streaming, restituendo eventi."""
-    logger.info("stream_message(user=%s, session=%s, files=%d)", user_id, session_id, len(file_paths or []))
-    logger.debug("Messaggio: %s", message)
+    logger.info(
+        "stream_message(user=%s, session=%s, files=%d)",
+        user_id, session_id, len(file_paths or []),
+    )
+    if file_paths:
+        logger.debug("File allegati: %s", [str(p) for p in file_paths])
+    logger.debug("Messaggio: %.200s", message)
     images, audios, videos, documents = _prepare_media(file_paths or [])
 
     text_input = message or ""

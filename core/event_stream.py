@@ -6,7 +6,9 @@ evitando che i plugin canale dipendano direttamente dai tipi Agno.
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -77,6 +79,8 @@ async def stream_with_progress(
     L'ultimo yield ha completed=True e final_content popolato.
     """
     progress = RunProgress()
+    run_start = time.monotonic()
+    tool_start_times: dict[str, float] = {}  # tool_call_id → timestamp avvio
 
     async for event in stream_message(
         message=message,
@@ -88,7 +92,10 @@ async def stream_with_progress(
 
         # ── Task ────────────────────────────────────────────────────────
         if isinstance(event, TaskCreatedEvent):
-            logger.info("Task creato: %s → %s", event.title, event.assignee)
+            logger.info(
+                "Task creato: [%s] → %s | titolo: %s",
+                event.task_id, event.assignee, event.title,
+            )
             progress.tasks.append(TaskInfo(
                 id=event.task_id,
                 title=event.title,
@@ -98,7 +105,7 @@ async def stream_with_progress(
             updated = True
 
         elif isinstance(event, TaskUpdatedEvent):
-            logger.info("Task aggiornato: %s → %s", event.task_id, event.status)
+            logger.info("Task aggiornato: [%s] → stato=%s", event.task_id, event.status)
             for task in progress.tasks:
                 if task.id == event.task_id:
                     task.status = event.status
@@ -108,9 +115,16 @@ async def stream_with_progress(
         # ── Tool call del team leader ───────────────────────────────────
         elif isinstance(event, ToolCallStartedEvent) and event.tool and event.tool.tool_name:
             agent_label = getattr(event, "team_name", "") or "Team Leader"
+            tool_id = event.tool.tool_call_id
+            tool_start_times[tool_id] = time.monotonic()
             logger.info("Tool call (team): %s agent=%s", event.tool.tool_name, agent_label)
+            if event.tool.tool_args:
+                logger.debug(
+                    "  ↳ args: %s",
+                    json.dumps(event.tool.tool_args, ensure_ascii=False, default=str),
+                )
             progress.tool_steps.append(ToolStepInfo(
-                id=event.tool.tool_call_id,
+                id=tool_id,
                 name=event.tool.tool_name,
                 args=event.tool.tool_args,
                 status="running",
@@ -119,20 +133,38 @@ async def stream_with_progress(
             updated = True
 
         elif isinstance(event, ToolCallCompletedEvent) and event.tool:
-            _update_step_status(progress.tool_steps, event.tool.tool_call_id, "done")
+            tool_id = event.tool.tool_call_id
+            elapsed = time.monotonic() - tool_start_times.pop(tool_id, time.monotonic())
+            logger.info(
+                "Tool completato (team): %s in %.1fs",
+                event.tool.tool_name, elapsed,
+            )
+            _update_step_status(progress.tool_steps, tool_id, "done")
             updated = True
 
         elif isinstance(event, ToolCallErrorEvent) and event.tool:
-            logger.error("Tool error (team): %s – %s", event.tool.tool_name, getattr(event, "error", "unknown"))
-            _update_step_status(progress.tool_steps, event.tool.tool_call_id, "error")
+            tool_id = event.tool.tool_call_id
+            elapsed = time.monotonic() - tool_start_times.pop(tool_id, time.monotonic())
+            logger.error(
+                "Tool error (team): %s in %.1fs – %s",
+                event.tool.tool_name, elapsed, getattr(event, "error", "unknown"),
+            )
+            _update_step_status(progress.tool_steps, tool_id, "error")
             updated = True
 
         # ── Tool call dei membri ────────────────────────────────────────
         elif isinstance(event, MemberToolCallStartedEvent) and event.tool and event.tool.tool_name:
             agent_label = getattr(event, "agent_name", "") or "Agente"
+            tool_id = event.tool.tool_call_id
+            tool_start_times[tool_id] = time.monotonic()
             logger.info("Tool call (member): %s agent=%s", event.tool.tool_name, agent_label)
+            if event.tool.tool_args:
+                logger.debug(
+                    "  ↳ args: %s",
+                    json.dumps(event.tool.tool_args, ensure_ascii=False, default=str),
+                )
             progress.tool_steps.append(ToolStepInfo(
-                id=event.tool.tool_call_id,
+                id=tool_id,
                 name=event.tool.tool_name,
                 args=event.tool.tool_args,
                 status="running",
@@ -141,21 +173,36 @@ async def stream_with_progress(
             updated = True
 
         elif isinstance(event, MemberToolCallCompletedEvent) and event.tool:
-            _update_step_status(progress.tool_steps, event.tool.tool_call_id, "done")
+            tool_id = event.tool.tool_call_id
+            elapsed = time.monotonic() - tool_start_times.pop(tool_id, time.monotonic())
+            logger.info(
+                "Tool completato (member): %s in %.1fs",
+                event.tool.tool_name, elapsed,
+            )
+            _update_step_status(progress.tool_steps, tool_id, "done")
             updated = True
 
         elif isinstance(event, MemberToolCallErrorEvent) and event.tool:
-            logger.error("Tool error (member): %s – %s", event.tool.tool_name, getattr(event, "error", "unknown"))
-            _update_step_status(progress.tool_steps, event.tool.tool_call_id, "error")
+            tool_id = event.tool.tool_call_id
+            elapsed = time.monotonic() - tool_start_times.pop(tool_id, time.monotonic())
+            logger.error(
+                "Tool error (member): %s in %.1fs – %s",
+                event.tool.tool_name, elapsed, getattr(event, "error", "unknown"),
+            )
+            _update_step_status(progress.tool_steps, tool_id, "error")
             updated = True
 
         # ── Run completata ──────────────────────────────────────────────
         elif isinstance(event, RunCompletedEvent):
+            total = time.monotonic() - run_start
             progress.completed = True
             progress.raw_completed_event = event
             if event.content:
                 progress.final_content = str(event.content)
-            logger.info("Run completata. Lunghezza risposta: %d", len(progress.final_content or ""))
+            logger.info(
+                "Run completata in %.1fs. Risposta: %d caratteri",
+                total, len(progress.final_content or ""),
+            )
             updated = True
 
         if updated:

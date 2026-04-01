@@ -1,0 +1,71 @@
+# ── Registro temi PDF ─────────────────────────────────────────────────────────
+# Ogni tema ha un insieme di tag che descrivono il tipo di contenuto
+# per cui è più adatto. Il tool get_theme_for_tags() usa questi tag
+# per restituire automaticamente il tema migliore dato il contenuto dell'articolo.
+
+# Il tema 'minimal' è il default: viene usato sempre quando nessun tag corrisponde.
+
+themes:
+  minimal:
+    description: "Minimale — bianco puro, tipografia pulita, zero decorazioni. Default per contenuti generici."
+    is_default: true
+    tags:
+      - generale
+      - default
+      - report
+      - documento
+      - testo
+      - altro
+
+  modern:
+    description: "Moderno e professionale — header blu navy, accenti dorati, sans-serif"
+    tags:
+      - business
+      - news
+      - economia
+      - finanza
+      - politica
+      - sport
+      - cultura
+      - salute
+      - scienza
+      - ambiente
+      - generale
+      - default
+
+  editorial:
+    description: "Editoriale — stile magazine, font serif, drop cap, layout giornalistico"
+    tags:
+      - editoriale
+      - magazine
+      - approfondimento
+      - intervista
+      - storia
+      - narrativa
+      - arte
+      - cinema
+      - musica
+      - letteratura
+      - lifestyle
+      - travel
+      - food
+
+  dark:
+    description: "Dark mode — sfondo scuro, accenti indaco, ideale per contenuti tech"
+    tags:
+      - tech
+      - tecnologia
+      - ai
+      - intelligenza-artificiale
+      - programmazione
+      - software
+      - hardware
+      - cybersecurity
+      - sicurezza
+      - hacking
+      - open-source
+      - startup
+      - crypto
+      - blockchain
+      - gaming
+      - scifi

@@ -5,17 +5,19 @@ import tempfile
 from pathlib import Path
 
 import markdown
+import yaml
 from agno.tools import Toolkit
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
-_DEFAULT_THEME = "modern"
+_THEMES_CONFIG = _TEMPLATES_DIR / "themes.yaml"
+_DEFAULT_THEME = "minimal"
 
-# Descrizione dei temi disponibili
-_THEME_DESCRIPTIONS: dict[str, str] = {
-    "modern": "Moderno e professionale — header blu navy, accenti dorati, sans-serif",
-    "editorial": "Editoriale — stile magazine, font serif, drop cap, layout giornalistico",
-    "dark": "Dark mode — sfondo scuro, accenti indaco, ideale per contenuti tech",
-}
+
+def _load_themes_config() -> dict:
+    """Legge themes.yaml e restituisce il dizionario dei temi."""
+    if not _THEMES_CONFIG.exists():
+        return {}
+    return yaml.safe_load(_THEMES_CONFIG.read_text(encoding="utf-8")).get("themes", {})
 
 
 class PdfTool(Toolkit):
@@ -25,7 +27,11 @@ class PdfTool(Toolkit):
         super().__init__(name="pdf_tool")
         self.base_dir = base_dir
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        # Tema corrente — modificabile a runtime tramite set_pdf_theme() o get_theme_for_tags()
+        self._current_theme: str = _DEFAULT_THEME
         self.register(self.create_pdf)
+        self.register(self.set_pdf_theme)
+        self.register(self.get_theme_for_tags)
         self.register(self.list_themes)
 
     @staticmethod
@@ -55,34 +61,100 @@ class PdfTool(Toolkit):
         return template_path.read_text(encoding="utf-8")
 
     def list_themes(self) -> str:
-        """Elenca i temi grafici disponibili per la generazione PDF.
+        """Elenca i temi grafici disponibili con i loro tag e il tema attualmente attivo.
+
+        Usa questo tool per scoprire quali temi e tag sono disponibili.
 
         Returns:
-            Lista dei temi disponibili con la loro descrizione.
+            Lista dei temi con descrizione, tag e tema corrente selezionato.
         """
-        available = [
-            f"- **{name}**: {desc}"
-            for name, desc in _THEME_DESCRIPTIONS.items()
-            if (_TEMPLATES_DIR / f"{name}.html").exists()
-        ]
-        if not available:
+        themes = _load_themes_config()
+        if not themes:
             return "Nessun tema disponibile."
-        return "Temi PDF disponibili:\n" + "\n".join(available)
 
-    def create_pdf(
-        self,
-        file_name: str,
-        title: str,
-        body: str,
-        theme: str = "modern",
-    ) -> str:
+        lines = [f"Tema corrente: **{self._current_theme}**\n"]
+        for name, data in themes.items():
+            if not (_TEMPLATES_DIR / f"{name}.html").exists():
+                continue
+            tags_str = ", ".join(data.get("tags", []))
+            lines.append(f"**{name}** — {data.get('description', '')}")
+            lines.append(f"  Tag: {tags_str}")
+        return "\n".join(lines)
+
+    def get_theme_for_tags(self, tags: str) -> str:
+        """Restituisce il tema PDF migliore in base ai tag del contenuto dell'articolo.
+
+        Analizza i tag forniti e seleziona automaticamente il tema più adatto,
+        impostandolo come tema corrente per il prossimo create_pdf.
+
+        Chiama questo tool PRIMA di create_pdf, passando i tag che descrivono
+        il tipo di contenuto dell'articolo (es. "tech, ai, cybersecurity").
+
+        Args:
+            tags: Stringa di tag separati da virgola che descrivono il contenuto
+                  (es. "tech, intelligenza-artificiale, startup").
+
+        Returns:
+            Nome del tema selezionato e impostato, con spiegazione.
+        """
+        themes = _load_themes_config()
+        if not themes:
+            self._current_theme = _DEFAULT_THEME
+            return f"Tema impostato: {_DEFAULT_THEME} (nessun registro temi trovato)"
+
+        # Normalizza i tag in input
+        input_tags = {t.strip().lower() for t in tags.split(",") if t.strip()}
+
+        # Conta le corrispondenze per ogni tema
+        best_theme = _DEFAULT_THEME
+        best_score = 0
+        for theme_name, data in themes.items():
+            if not (_TEMPLATES_DIR / f"{theme_name}.html").exists():
+                continue
+            theme_tags = {t.lower() for t in data.get("tags", [])}
+            score = len(input_tags & theme_tags)
+            if score > best_score:
+                best_score = score
+                best_theme = theme_name
+
+        self._current_theme = best_theme
+        if best_score == 0:
+            return (
+                f"Tema impostato: **{best_theme}** (default — nessun tag corrispondente trovato)"
+            )
+        matched = input_tags & {t.lower() for t in themes[best_theme].get("tags", [])}
+        return (
+            f"Tema impostato: **{best_theme}** "
+            f"(tag corrispondenti: {', '.join(sorted(matched))})"
+        )
+
+    def set_pdf_theme(self, theme: str) -> str:
+        """Seleziona manualmente il tema grafico da usare per il prossimo PDF generato.
+
+        Usa get_theme_for_tags() per la selezione automatica basata sul contenuto.
+        Usa questo tool solo se l'utente specifica esplicitamente un nome di tema.
+
+        Args:
+            theme: Nome del tema. Valori validi: "modern", "editorial", "dark".
+
+        Returns:
+            Conferma del tema impostato oppure errore se il tema non esiste.
+        """
+        if not (_TEMPLATES_DIR / f"{theme}.html").exists():
+            available = ", ".join(p.stem for p in _TEMPLATES_DIR.glob("*.html"))
+            return f"Tema '{theme}' non trovato. Temi disponibili: {available}"
+        self._current_theme = theme
+        return f"Tema impostato: {theme}"
+
+    def create_pdf(self, file_name: str, title: str, body: str) -> str:
         """Crea un PDF di alta qualità renderizzando un template HTML/CSS con Playwright.
+
+        Usa il tema selezionato con set_pdf_theme() (default: "modern").
 
         Args:
             file_name: Nome del file di output (es. "articolo.pdf").
             title: Titolo del documento mostrato nell'header del PDF.
             body: Contenuto in formato Markdown.
-            theme: Tema grafico — "modern" (default), "editorial", "dark".
 
         Returns:
             Percorso del file creato, oppure messaggio di errore.
@@ -92,7 +164,7 @@ class PdfTool(Toolkit):
             safe_name += ".pdf"
         file_path = self.base_dir / safe_name
 
-        template_html = self._load_template(theme)
+        template_html = self._load_template(self._current_theme)
         if not template_html:
             return "Errore: nessun template HTML trovato nella cartella templates/."
 
@@ -136,93 +208,5 @@ class PdfTool(Toolkit):
 
             return f"PDF creato: {file_path}"
 
-        except Exception as e:
-            return f"Errore nella creazione del PDF: {e}"
-
-
-
-class PdfTool(Toolkit):
-    """Genera file PDF con contenuto Markdown, con resa grafica curata."""
-
-    def __init__(self, base_dir: Path = Path("sandbox")):
-        super().__init__(name="pdf_tool")
-        self.base_dir = base_dir
-        self.base_dir.mkdir(parents=True, exist_ok=True)
-        self.register(self.create_pdf)
-
-    @staticmethod
-    def _prepare_body(body: str) -> str:
-        """Sanitizza il body prima della conversione Markdown → HTML."""
-        # Rimuove il titolo H1 iniziale (viene già usato nel frontespizio come 'title')
-        lines = body.strip().splitlines()
-        if lines and lines[0].lstrip().startswith("# "):
-            lines = lines[1:]
-        text = "\n".join(lines).strip()
-        # Rimuove la riga "ARTICOLO COMPLETATO" aggiunta dal writer
-        text = re.sub(r"\n?ARTICOLO COMPLETATO[^\n]*\n?", "", text).strip()
-        return text
-
-    @staticmethod
-    def _sanitize_html(html: str) -> str:
-        """Rimuove o sostituisce tag HTML non supportati da fpdf2 write_html."""
-        # <hr> non è supportato: sostituisci con uno spazio vuoto
-        html = re.sub(r"<hr\s*/?>", "<br/>", html, flags=re.IGNORECASE)
-        return html
-
-    def create_pdf(self, file_name: str, title: str, body: str) -> str:
-        """Crea un PDF esteticamente curato a partire da contenuto Markdown.
-
-        Il body supporta la sintassi Markdown: **grassetto**, *corsivo*,
-        # titoli, - elenchi, 1. elenchi numerati, ecc.
-
-        Args:
-            file_name: Nome del file (es. "barzelletta.pdf").
-            title: Titolo del documento mostrato in copertina.
-            body: Contenuto in formato Markdown.
-
-        Returns:
-            Percorso del file creato, oppure un messaggio di errore.
-        """
-        safe_name = Path(file_name).name
-        if not safe_name.endswith(".pdf"):
-            safe_name += ".pdf"
-        file_path = self.base_dir / safe_name
-
-        try:
-            pdf = FPDF()
-            pdf.set_auto_page_break(auto=True, margin=20)
-            pdf.set_margins(25, 20, 25)
-            pdf.add_page()
-
-            # Linea decorativa superiore
-            pdf.set_draw_color(*_ACCENT)
-            pdf.set_line_width(0.8)
-            pdf.line(25, 18, pdf.w - 25, 18)
-
-            # Titolo principale
-            pdf.ln(8)
-            pdf.set_text_color(*_PRIMARY)
-            pdf.set_font("Helvetica", style="B", size=18)
-            pdf.multi_cell(0, 8, title, align="C")
-            pdf.ln(4)
-
-            # Linea sotto il titolo
-            y = pdf.get_y()
-            pdf.line(60, y, pdf.w - 60, y)
-            pdf.ln(6)
-
-            # Corpo — sanitizza body, converti Markdown in HTML e renderizza
-            pdf.set_text_color(*_TEXT)
-            pdf.set_font("Helvetica", size=10)
-            clean_body = self._prepare_body(body)
-            body_html = markdown.markdown(
-                clean_body,
-                extensions=["tables", "sane_lists"],
-            )
-            body_html = self._sanitize_html(body_html)
-            pdf.write_html(body_html, tag_styles=_TAG_STYLES)
-
-            pdf.output(str(file_path))
-            return f"PDF creato: {file_path}"
         except Exception as e:
             return f"Errore nella creazione del PDF: {e}"

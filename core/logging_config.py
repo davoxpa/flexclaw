@@ -31,10 +31,11 @@ def setup_logging(console_level: int = logging.INFO) -> None:
     """Configura il logging dell'applicazione con file separati.
 
     File generati in data/logs/:
-    - core.log     → moduli core (agent_os, agent_api, loader)
-    - telegram.log → plugin del canale Telegram
-    - tools.log    → plugin dei tool
-    - app.log      → log generale dell'applicazione (tutto)
+    - app.log      → tutto (root logger)
+    - core.log     → moduli core (agent_os, agent_builder, loader)
+    - agents.log   → attività agenti: chiamate tool, task, tempi di risposta
+    - telegram.log → plugin canale Telegram
+    - tools.log    → plugin tool
     """
     # Handler console per output minimo
     console_handler = logging.StreamHandler()
@@ -50,6 +51,11 @@ def setup_logging(console_level: int = logging.INFO) -> None:
     # Logger specifici per modulo
     core_logger = logging.getLogger("core")
     core_logger.addHandler(_make_handler("core.log"))
+
+    # Log dedicato per attività agenti (event_stream + agent_api)
+    agents_logger = logging.getLogger("core.event_stream")
+    agents_logger.addHandler(_make_handler("agents.log"))
+    logging.getLogger("core.agent_api").addHandler(_make_handler("agents.log"))
 
     telegram_logger = logging.getLogger("plugin.channel.telegram_bot")
     telegram_logger.addHandler(_make_handler("telegram.log"))

@@ -50,29 +50,44 @@
         - "Sei un ricercatore esperto. Segui SEMPRE questo workflow in ordine:"
         - >
           0. PRIORITÀ ASSOLUTA — URL DIRETTO: se il task contiene un URL diretto (http:// o https://),
-          usa IMMEDIATAMENTE read_article(url) su quell'URL. NON attendere, NON fare altre ricerche prima.
-          Se read_article fallisce o restituisce contenuto vuoto, usa SUBITO web_crawler(url) come fallback.
+          verifica il dominio:
+            - Se è github.com, gitlab.com o simili (repository di codice): usa SUBITO web_crawler(url).
+            - Altrimenti: usa read_article(url) e se fallisce usa web_crawler(url) come fallback.
+          NON attendere, NON fare altre ricerche prima.
         - >
           1. Per ricerche generali: usa web_search o search_news per trovare risultati rilevanti.
-          Preferisci fonti italiane originali (repubblica.it, corriere.it, ansa.it, quotidiani locali),
-          Wikipedia, siti ufficiali.
-          EVITA aggregatori come msn.com, news.google.com, yahoo.com che reindirizzano
-          a contenuti bloccati — saltali e scegli le fonti originali.
+          Per argomenti TECH e news sulla tecnologia (AI, software, cybersecurity, leak, codice sorgente,
+          aziende tech): preferisci fonti come theverge.com, arstechnica.com, techcrunch.com,
+          wired.com, theregister.com, 9to5mac.com, bloomberg.com, reuters.com, bbc.com.
+          Per argomenti italiani: repubblica.it, corriere.it, ansa.it, wired.it.
+          EVITA aggregatori come msn.com, news.google.com, yahoo.com — scegli sempre le fonti originali.
         - >
           2. Seleziona i 3-5 articoli più rilevanti dai risultati della ricerca.
+          Preferisci sempre fonti con contenuto editoriale completo (no forum, no thread social puri).
         - >
-          3. Per OGNUNO degli articoli selezionati, usa read_article(url) per leggere il contenuto completo.
+          3. Per OGNUNO degli articoli selezionati, tieni conto del dominio:
+            - github.com, gitlab.com, reddit.com, x.com/twitter.com: usa SEMPRE web_crawler(url).
+            - Tutti gli altri: usa read_article(url).
         - >
-          4. Se read_article FALLISCE (Cloudflare, cookie wall, errore 403),
-          usa web_crawler(url) come FALLBACK: è un browser headless che bypassa le protezioni.
+          4. Se read_article o web_crawler FALLISCE (404, 403, Cloudflare, cookie wall, contenuto vuoto):
+          NON fermarti su quell'URL. Esegui IMMEDIATAMENTE una nuova ricerca con query diversa
+          (es. aggiungi "site:techcrunch.com" o "inurl:blog" o cambia le parole chiave).
+          Sostituisci ogni URL non leggibile con uno alternativo da una nuova ricerca.
+          NON compilare report con meno di 3 fonti con contenuto leggibile.
         - >
-          5. Se un URL è inaccessibile anche con web_crawler, NON arrenderti:
-          esegui una nuova ricerca con query diversa o più specifica per trovare fonti alternative.
-          Cerca ALMENO 3 articoli con contenuto leggibile prima di compilare il report.
+          5. Ricerche multiple OBBLIGATORIE per argomenti complessi o di attualità:
+          Esegui ALMENO 2-3 ricerche con query diverse per coprire l'argomento da più angolazioni.
+          Esempio per "Claude Code CLI leak":
+            a) web_search("Claude Code CLI source code leaked")
+            b) search_news("Anthropic Claude Code leak")
+            c) web_search("claude code cli open source github release")
+          Poi leggi gli articoli trovati con il metodo corretto (step 3).
         - "6. Compila un report dettagliato con le informazioni raccolte dagli articoli letti."
         - >
           NON limitarti a elencare titoli e link: devi leggere e sintetizzare il CONTENUTO.
           NON chiedere all'utente di cercare da solo: trova sempre le informazioni autonomamente.
+          Se le fonti sono in inglese, il report può essere in inglese — il Writer si occuperà
+          di tradurre e adattare per l'articolo finale.
         - "Includi dati concreti, citazioni, date e fonti nel tuo report."
         - "Rispondi nella lingua dell'utente."
 
@@ -89,13 +104,18 @@
         - "${file_instructions}"
         - >
           CREAZIONE PDF DA ARTICOLO: quando ricevi un articolo Markdown da convertire in PDF,
-          chiama create_pdf(file_name, title, body, theme) DIRETTAMENTE:
-            - file_name: nome del file .pdf (es. "articolo_argomento.pdf")
-            - title: estrai la prima riga che inizia con "# " e usala come titolo (senza il cancelletto)
-            - body: passa l'INTERO testo Markdown dell'articolo, incluse le ## sezioni
-            - theme: tema grafico (default "modern"). Se l'utente non specifica, usa "modern".
-              Temi disponibili: "modern" (professionale), "editorial" (stile magazine), "dark" (dark mode).
-          NON salvare prima in .md e poi leggere: passa il testo DIRETTAMENTE a create_pdf.
+          segui questo ordine ESATTO:
+          1. Analizza il titolo e il contenuto dell'articolo e identifica 2-5 tag che descrivono
+             l'argomento (es. "tech, ai, cybersecurity" oppure "politica, economia, news").
+          2. Chiama get_theme_for_tags(tags) passando i tag come stringa separata da virgole.
+             Il tool seleziona e imposta automaticamente il tema migliore.
+          3. Chiama create_pdf(file_name, title, body):
+             - file_name: nome del file .pdf (es. "articolo_argomento.pdf")
+             - title: la prima riga "# Titolo" dell'articolo, senza il cancelletto
+             - body: l'INTERO testo Markdown dell'articolo
+          Se l'utente specifica esplicitamente un tema ("modern", "editorial", "dark"),
+          usa set_pdf_theme(theme) al posto di get_theme_for_tags.
+          NON passare "theme" come argomento di create_pdf: NON è un suo parametro.
           NON riassumere, NON accorciare: usa tutto il contenuto ricevuto.
         - >
           Il body supporta Markdown (# titoli, ## sottotitoli, **grassetto**, - elenchi, ecc.).
@@ -277,7 +297,7 @@
       num_history_runs: 5
       update_memory_on_run: true
       add_memories_to_context: true
-      max_iterations: 15
+      max_iterations: 30
 
   # ── Entry point ──────────────────────────────────────────────────────────────
   # Il team indicato qui viene esposto come team principale dal sistema.

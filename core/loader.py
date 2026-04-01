@@ -96,6 +96,7 @@ def install_plugin_deps() -> None:
     """Installa le dipendenze dei plugin abilitati se non già presenti."""
     req_files = _find_plugin_requirements()
     if not req_files:
+        logger.info("Nessun plugin con requirements.txt trovato, skip installazione")
         return
 
     # Rileva se usare uv o pip
@@ -108,12 +109,18 @@ def install_plugin_deps() -> None:
     except FileNotFoundError:
         use_uv = False
 
+    installer = "uv" if use_uv else "pip"
+    logger.info(
+        "Installazione dipendenze plugin (%s): %d file requirements.txt",
+        installer, len(req_files),
+    )
+
     for req_path in req_files:
         plugin_name = req_path.parent.name
         cmd = [*(uv_cmd if use_uv else pip_cmd), str(req_path)]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
-            logger.debug("Dipendenze di '%s' verificate", plugin_name)
+            logger.info("Dipendenze plugin '%s' OK", plugin_name)
         else:
             logger.warning(
                 "Errore nell'installazione dipendenze di '%s': %s",
@@ -156,8 +163,9 @@ def start_channels() -> list[threading.Thread]:
         )
         thread.start()
         threads.append(thread)
-        logger.debug("Canale '%s' avviato in background", channel_id)
+        logger.info("Canale '%s' avviato in background (thread=%s)", channel_id, thread.name)
 
+    logger.info("%d canale/i avviato/i: %s", len(threads), [t.name for t in threads])
     return threads
 
 
@@ -266,8 +274,9 @@ def load_tools() -> list[Toolkit]:
                 instance.name = toolkit_name
 
             tools.append(instance)
-            logger.debug("Tool '%s' caricato (name='%s')", tool_entry["id"], instance.name)
+            logger.info("Tool '%s' caricato (name='%s')", tool_entry["id"], instance.name)
         except Exception:
             logger.exception("Errore nell'inizializzazione del tool '%s'", tool_entry["id"])
 
+    logger.info("%d tool caricati: %s", len(tools), [t.name for t in tools])
     return tools
