@@ -37,6 +37,14 @@ services:
       - flexclaw-data:/app/data
       - flexclaw-sandbox:/app/sandbox
 
+    # Verifica che il container sia operativo prima di ricevere traffico
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7777/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
     # Limite risorse (Playwright + Chromium usa RAM)
     deploy:
       resources:

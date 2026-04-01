@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import signal
 import sys
+import threading
 
 # Carica l'ambiente PRIMA di importare agent_os
 project_root = Path(__file__).resolve().parent
@@ -40,6 +41,20 @@ LOGO = r"""
 PORT = int(os.environ.get("AGENT_OS_PORT", 7777))
 
 
+def _start_health_server() -> None:
+    """Avvia un server HTTP minimale con endpoint /health su PORT."""
+    import uvicorn
+    from fastapi import FastAPI
+
+    health_app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+    @health_app.get("/health")
+    def health_check() -> dict:
+        return {"status": "ok"}
+
+    uvicorn.run(health_app, host="0.0.0.0", port=PORT, log_level="warning")
+
+
 def show_welcome():
     console.print(Text(LOGO, style="bold cyan"), highlight=False)
     console.print(
@@ -72,6 +87,14 @@ if __name__ == "__main__":
     show_welcome()
     install_plugin_deps()
     try:
+        # Avvia il server health check in background su PORT
+        health_thread = threading.Thread(
+            target=_start_health_server,
+            name="health-server",
+            daemon=True,
+        )
+        health_thread.start()
+
         # Avvia i plugin channel abilitati in background
         threads = start_channels()
         if not threads:
