@@ -1,4 +1,4 @@
-# ── FlexClaw3 Dockerfile ──────────────────────────────────────────────────────
+# ── FlexClaw Dockerfile ──────────────────────────────────────────────────────
 # Immagine multi-stage: build con uv, runtime snello con Playwright
 
 # ── Stage 1: build delle dipendenze ──────────────────────────────────────────

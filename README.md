@@ -483,7 +483,7 @@ teams:
 
 <div align="center">
 
-**FlexClaw3** — Agenti AI modulari, orchestrati, estensibili.
+**FlexClaw** — Agenti AI modulari, orchestrati, estensibili.
 
 *Creato da Davide Salvato*
 
