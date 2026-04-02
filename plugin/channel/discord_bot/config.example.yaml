@@ -1,0 +1,29 @@
+id: "discord_bot"
+name: "Discord Bot"
+description: "Un plugin per integrare un bot Discord con AgentOS, permettendo agli utenti di interagire con gli agenti tramite messaggi e comandi slash."
+version: "0.1.0"
+author: "Davide Salvato"
+
+# Configurazione plugin Discord
+discord:
+  # ID Discord dell'admin (può usare comandi privilegiati)
+  # Recuperabile attivando Developer Mode in Discord → click destro sul profilo → Copia ID
+  admin_user_id: 123456789
+
+  # Utenti autorizzati a interagire col bot:
+  #   "*"            → tutti gli utenti possono usare il bot
+  #   [123, 456]     → solo gli user_id Discord indicati
+  allowed_users: [123456789]
+
+  # ID dei server (guild) in cui il bot è attivo (opzionale):
+  #   []             → attivo in tutti i server dove è stato invitato
+  #   [111, 222]     → attivo solo nei server indicati
+  guild_ids: []
+
+  # Modalità di risposta nei canali del server:
+  #   "all"      → risponde a tutti i messaggi
+  #   "mention"  → risponde solo quando viene menzionato con @bot
+  reply_mode: "mention"
+
+  # Mostra il messaggio con gli step dei tool durante l'elaborazione
+  show_tool_steps: true

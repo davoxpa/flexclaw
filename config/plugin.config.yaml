@@ -1,6 +1,8 @@
 channel:
 - id: telegram_bot
   status: enabled
+- id: discord_bot
+  status: enabled
 
 # ── Tool ─────────────────────────────────────────────────────────────────────
 # Tool custom (con codice in plugin/tool/<id>/) → solo id e status.
