@@ -1,12 +1,16 @@
 """Tool per la generazione di file PDF da template HTML/CSS con supporto temi."""
 
+import logging
 import re
 import tempfile
+import traceback
 from pathlib import Path
 
 import markdown
 import yaml
 from agno.tools import Toolkit
+
+logger = logging.getLogger(__name__)
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 _THEMES_CONFIG = _TEMPLATES_DIR / "themes.yaml"
@@ -175,7 +179,10 @@ class PdfTool(Toolkit):
             clean_body = self._prepare_body(body)
             body_html = markdown.markdown(
                 clean_body,
-                extensions=["tables", "sane_lists"],
+                extensions=[
+                    "tables", "sane_lists", "fenced_code",
+                    "smarty", "footnotes", "toc",
+                ],
             )
             page_html = (
                 template_html
@@ -201,6 +208,22 @@ class PdfTool(Toolkit):
                         path=str(file_path),
                         format="A4",
                         print_background=True,
+                        margin={
+                            "top": "12mm",
+                            "bottom": "18mm",
+                            "left": "0mm",
+                            "right": "0mm",
+                        },
+                        display_header_footer=True,
+                        header_template="<span></span>",
+                        footer_template=(
+                            '<div style="font-size:9px;color:#aaa;width:100%;'
+                            'text-align:center;padding:0 20px;">'
+                            '<span class="pageNumber"></span>'
+                            " / "
+                            '<span class="totalPages"></span>'
+                            "</div>"
+                        ),
                     )
                     browser.close()
             finally:
@@ -209,4 +232,10 @@ class PdfTool(Toolkit):
             return f"PDF creato: {file_path}"
 
         except Exception as e:
-            return f"Errore nella creazione del PDF: {e}"
+            logger.error("Errore nella creazione del PDF '%s': %s", safe_name, e)
+            logger.debug(traceback.format_exc())
+            return (
+                f"Errore nella creazione del PDF: {e}. "
+                "Verifica che Playwright sia installato "
+                "(uv run playwright install chromium) e riprova."
+            )

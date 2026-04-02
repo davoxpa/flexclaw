@@ -110,6 +110,14 @@
       color: #9ca3af;
       text-align: right;
     }
+
+    /* ── Regole di impaginazione multi-pagina ────────────────── */
+    h2, h3, h4 { break-after: avoid; }
+    blockquote, pre, figure { break-inside: avoid; }
+    tr { break-inside: avoid; }
+    li { break-inside: avoid; }
+    p { orphans: 3; widows: 3; }
+    img { max-width: 100%; height: auto; display: block; margin: 12px 0; }
   </style>
 </head>
 <body>
