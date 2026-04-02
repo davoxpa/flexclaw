@@ -1,7 +1,9 @@
 import asyncio
 import logging
 import os
+import ssl
 
+import aiohttp
 import certifi
 import discord
 
@@ -9,10 +11,6 @@ from plugin.channel.discord_bot.config import config
 from plugin.channel.discord_bot.handlers import setup_handlers
 
 logger = logging.getLogger(__name__)
-
-# Configura automaticamente i certificati SSL (risolve problemi su macOS)
-if not os.environ.get("SSL_CERT_FILE"):
-    os.environ["SSL_CERT_FILE"] = certifi.where()
 
 # Evento per segnalare lo shutdown dall'esterno
 shutdown_event: asyncio.Event | None = None
@@ -68,6 +66,20 @@ def start_bot(stop_event: asyncio.Event | None = None) -> None:
         return
 
     client = _build_client()
+
+    # Intercetta la creazione della session HTTP di discord.py per iniettare
+    # un connector con i certificati CA di certifi.
+    # Su macOS, Python 3.11 non carica i CA di sistema; discord.py crea
+    # il connector senza contesto SSL esplicito causando CERTIFICATE_VERIFY_FAILED.
+    _original_static_login = client.http.static_login
+
+    async def _static_login_with_ssl(token: str):
+        ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+        client.http.connector = aiohttp.TCPConnector(limit=0, ssl=ssl_ctx)
+        return await _original_static_login(token)
+
+    client.http.static_login = _static_login_with_ssl
+
     logger.debug("Bot Discord avviato")
 
     try:
