@@ -14,6 +14,7 @@ from telegram.ext import (
     filters,
 )
 
+from core.logging_config import _make_handler
 from plugin.channel.telegram_bot.config import config
 from plugin.channel.telegram_bot.handlers import (
     handle_file,
@@ -32,6 +33,11 @@ from plugin.channel.telegram_bot.handlers import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Aggiunge l'handler su file dedicato solo la prima volta (evita duplicati al reload)
+_channel_logger = logging.getLogger("plugin.channel.telegram_bot")
+if not _channel_logger.handlers:
+    _channel_logger.addHandler(_make_handler("telegram.log"))
 
 # Evento per segnalare lo shutdown dall'esterno
 shutdown_event = None
