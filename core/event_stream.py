@@ -20,6 +20,7 @@ from agno.run.agent import (
 )
 from agno.run.team import (
     RunCompletedEvent,
+    RunContentEvent,
     TaskCreatedEvent,
     TaskUpdatedEvent,
     ToolCallCompletedEvent,
@@ -81,6 +82,7 @@ async def stream_with_progress(
     progress = RunProgress()
     run_start = time.monotonic()
     tool_start_times: dict[str, float] = {}  # tool_call_id → timestamp avvio
+    streamed_content: list[str] = []  # accumula i delta dal RunContentEvent
 
     async for event in stream_message(
         message=message,
@@ -192,6 +194,11 @@ async def stream_with_progress(
             _update_step_status(progress.tool_steps, tool_id, "error")
             updated = True
 
+        # ── Contenuto streaming della risposta ────────────────────────
+        elif isinstance(event, RunContentEvent):
+            if event.content:
+                streamed_content.append(str(event.content))
+
         # ── Run completata ──────────────────────────────────────────────
         elif isinstance(event, RunCompletedEvent):
             total = time.monotonic() - run_start
@@ -199,6 +206,15 @@ async def stream_with_progress(
             progress.raw_completed_event = event
             if event.content:
                 progress.final_content = str(event.content)
+            # Fallback: contenuto accumulato dallo streaming
+            if not progress.final_content and streamed_content:
+                progress.final_content = "".join(streamed_content)
+            # Fallback: ultima risposta dei membri del team
+            if not progress.final_content and getattr(event, "member_responses", None):
+                for member_resp in reversed(event.member_responses):
+                    if getattr(member_resp, "content", None):
+                        progress.final_content = str(member_resp.content)
+                        break
             logger.info(
                 "Run completata in %.1fs. Risposta: %d caratteri",
                 total, len(progress.final_content or ""),

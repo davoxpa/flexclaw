@@ -110,6 +110,9 @@ if not _valid:
 # Modello corrente (modificabile a runtime)
 _current_model: str = _default_model
 
+# Parametri di default da applicare a ogni modello (es. max_tokens)
+_model_defaults: dict[str, Any] = _config.get("model_defaults", {})
+
 logger.debug("Modello di default: %s", _current_model)
 
 db_sqlite = SqliteDb(db_file="data/db/flexclaw_sqlite.db")
@@ -147,6 +150,24 @@ except (ModuleNotFoundError, AttributeError):
     logger.warning("KnowledgeTool non trovato, funzionalità knowledge-save disabilitata")
     knowledge_tool = None
 
+# ── Funzioni per gestione modello ────────────────────────────────────────────
+
+
+def _apply_model_defaults(model_obj: object) -> None:
+    """Applica model_defaults da main.config.yaml al modello risolto."""
+    for key, value in _model_defaults.items():
+        if hasattr(model_obj, key):
+            setattr(model_obj, key, value)
+
+
+def _update_model_recursive(member: Agent | Team, model_obj: object) -> None:
+    """Aggiorna il modello ricorsivamente su agenti e team annidati."""
+    member.model = model_obj
+    if isinstance(member, Team) and member.members:
+        for sub_member in member.members:
+            _update_model_recursive(sub_member, model_obj)
+
+
 # ── Build agenti e team da YAML ─────────────────────────────────────────────
 
 _build_result: BuildResult = build_from_yaml(
@@ -159,6 +180,15 @@ _build_result: BuildResult = build_from_yaml(
 )
 
 flexclaw_team: Team = _build_result.team
+
+# Risolve il modello e applica model_defaults (es. max_tokens) a team e agenti
+if _model_defaults:
+    _init_model = resolve_model(_current_model)
+    if _init_model:
+        _apply_model_defaults(_init_model)
+        _update_model_recursive(flexclaw_team, _init_model)
+        logger.debug("model_defaults applicati: %s", _model_defaults)
+
 logger.debug(
     "Team principale '%s' costruito con %d membri da agents.config.yaml",
     flexclaw_team.name,
@@ -166,15 +196,7 @@ logger.debug(
 )
 
 
-# ── Funzioni per gestione modello a runtime ─────────────────────────────────
-
-
-def _update_model_recursive(member: Agent | Team, model_obj: object) -> None:
-    """Aggiorna il modello ricorsivamente su agenti e team annidati."""
-    member.model = model_obj
-    if isinstance(member, Team) and member.members:
-        for sub_member in member.members:
-            _update_model_recursive(sub_member, model_obj)
+# ── Funzioni pubbliche per gestione modello a runtime ───────────────────────
 
 
 def get_current_model() -> str:
@@ -210,7 +232,8 @@ def set_model(model_string: str) -> tuple[bool, str]:
     if model_obj is None:
         return False, f"Impossibile risolvere il modello: {model_string}"
 
-    # Aggiorna ricorsivamente team leader e tutti i membri (anche team annidati)
+    # Applica model_defaults (es. max_tokens) e aggiorna ricorsivamente
+    _apply_model_defaults(model_obj)
     _update_model_recursive(flexclaw_team, model_obj)
 
     _current_model = model_string

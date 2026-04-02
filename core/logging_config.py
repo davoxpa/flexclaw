@@ -34,8 +34,9 @@ def setup_logging(console_level: int = logging.INFO) -> None:
     - app.log      → tutto (root logger)
     - core.log     → moduli core (agent_os, agent_builder, loader)
     - agents.log   → attività agenti: chiamate tool, task, tempi di risposta
-    - telegram.log → plugin canale Telegram
     - tools.log    → plugin tool
+
+    I plugin canale (es. telegram, discord) registrano i propri handler autonomamente.
     """
     # Handler console per output minimo
     console_handler = logging.StreamHandler()
@@ -56,9 +57,6 @@ def setup_logging(console_level: int = logging.INFO) -> None:
     agents_logger = logging.getLogger("core.event_stream")
     agents_logger.addHandler(_make_handler("agents.log"))
     logging.getLogger("core.agent_api").addHandler(_make_handler("agents.log"))
-
-    telegram_logger = logging.getLogger("plugin.channel.telegram_bot")
-    telegram_logger.addHandler(_make_handler("telegram.log"))
 
     tools_logger = logging.getLogger("plugin.tool")
     tools_logger.addHandler(_make_handler("tools.log"))
