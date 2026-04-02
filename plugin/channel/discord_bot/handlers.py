@@ -286,12 +286,26 @@ def setup_handlers(client: discord.Client, tree: discord.app_commands.CommandTre
         if message.author.bot:
             return
 
+        # Debug: logga ogni messaggio ricevuto prima dei filtri
+        logger.debug(
+            "Evento on_message: autore=%s (ID: %s), guild=%s (ID: %s), "
+            "menzioni=%s, contenuto=%r",
+            message.author.name,
+            message.author.id,
+            message.guild.name if message.guild else "DM",
+            message.guild.id if message.guild else None,
+            [u.name for u in message.mentions],
+            (message.content or "")[:100],
+        )
+
         # Verifica autorizzazione utente
         if not config.is_user_allowed(message.author.id):
+            logger.debug("Messaggio ignorato: utente %s non autorizzato", message.author.id)
             return
 
         # Verifica guild autorizzata
         if message.guild and not config.is_guild_allowed(message.guild.id):
+            logger.debug("Messaggio ignorato: guild %s non autorizzata", message.guild.id)
             return
 
         # Logica reply_mode: in DM risponde sempre, nei canali dipende dalla config
@@ -300,11 +314,27 @@ def setup_handlers(client: discord.Client, tree: discord.app_commands.CommandTre
 
         if not is_dm:
             if config.reply_mode == "mention":
-                if not client.user or client.user not in message.mentions:
+                # Controlla menzione diretta o menzione tramite ruolo del bot
+                bot_mentioned = client.user and client.user in message.mentions
+                role_mentioned = False
+                if not bot_mentioned and message.guild and client.user:
+                    bot_member = message.guild.get_member(client.user.id)
+                    if bot_member:
+                        role_mentioned = any(
+                            r in message.role_mentions for r in bot_member.roles if not r.is_default()
+                        )
+                if not bot_mentioned and not role_mentioned:
+                    logger.debug(
+                        "Messaggio ignorato: bot non menzionato (menzioni: %s, ruoli: %s)",
+                        [u.name for u in message.mentions],
+                        [r.name for r in message.role_mentions],
+                    )
                     return
-                # Rimuove la menzione dal testo
+                # Rimuove la menzione dal testo (diretta o di ruolo)
                 text = text.replace(f"<@{client.user.id}>", "").strip()
                 text = text.replace(f"<@!{client.user.id}>", "").strip()
+                for role in message.role_mentions:
+                    text = text.replace(f"<@&{role.id}>", "").strip()
             # reply_mode "all" → risponde sempre
 
         # Se ci sono allegati, gestiscili
@@ -319,10 +349,12 @@ def setup_handlers(client: discord.Client, tree: discord.app_commands.CommandTre
         text = sanitize_user_input(text)
 
         username = message.author.display_name
+        guild_info = f", guild={message.guild.name} (ID: {message.guild.id})" if message.guild else ", DM"
         logger.info(
-            "Messaggio ricevuto da %s (id=%s, canale=%s): %s",
+            "Messaggio ricevuto da %s (ID: %s%s, canale=%s): %s",
             username,
             message.author.id,
+            guild_info,
             message.channel.id,
             text[:200] + "..." if len(text) > 200 else text,
         )

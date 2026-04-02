@@ -7,10 +7,16 @@ import aiohttp
 import certifi
 import discord
 
+from core.logging_config import _make_handler
 from plugin.channel.discord_bot.config import config
 from plugin.channel.discord_bot.handlers import setup_handlers
 
 logger = logging.getLogger(__name__)
+
+# Aggiunge l'handler su file dedicato solo la prima volta (evita duplicati al reload)
+_channel_logger = logging.getLogger("plugin.channel.discord_bot")
+if not _channel_logger.handlers:
+    _channel_logger.addHandler(_make_handler("discord.log"))
 
 # Evento per segnalare lo shutdown dall'esterno
 shutdown_event: asyncio.Event | None = None
@@ -46,6 +52,23 @@ def _build_client() -> discord.Client:
             client.user.id,
             len(client.guilds),
         )
+        # Log dettagliato delle guild per facilitare la configurazione
+        for guild in client.guilds:
+            logger.info(
+                "  Guild: %s (ID: %s) — %d membri",
+                guild.name,
+                guild.id,
+                guild.member_count or 0,
+            )
+            # Logga i membri solo se già in cache (richiede intent members)
+            if guild.members:
+                for member in guild.members:
+                    if not member.bot:
+                        logger.info(
+                            "    Utente: %s (ID: %s)",
+                            member.name,
+                            member.id,
+                        )
 
     @client.event
     async def on_error(event_name, *args, **kwargs):
