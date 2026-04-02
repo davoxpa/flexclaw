@@ -52,6 +52,10 @@ themes:
 
   dark:
     description: "Dark mode — sfondo scuro, accenti indaco, ideale per contenuti tech"
+    pdf_options:
+      # Colori del footer per mantenere la coerenza visiva con lo sfondo scuro
+      footer_bg: "#0f172a"
+      footer_color: "#475569"
     tags:
       - tech
       - tecnologia

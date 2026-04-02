@@ -204,26 +204,39 @@ class PdfTool(Toolkit):
                     )
                     page = browser.new_page()
                     page.goto(f"file://{tmp_path.resolve()}", wait_until="networkidle")
+                    # Leggi le opzioni PDF specifiche del tema corrente
+                    themes_config = _load_themes_config()
+                    theme_pdf_opts = themes_config.get(
+                        self._current_theme, {}
+                    ).get("pdf_options", {})
+                    footer_bg = theme_pdf_opts.get("footer_bg", "transparent")
+                    footer_color = theme_pdf_opts.get("footer_color", "#aaaaaa")
+
+                    # Il footer copre l'intera area del margine inferiore con il colore del tema
+                    footer_template = (
+                        f'<div style="position:relative;width:100%;height:18mm;'
+                        f'background:{footer_bg};margin:0;padding:0;">'
+                        f'<div style="font-size:9px;color:{footer_color};'
+                        f'text-align:center;padding-top:12mm;">'
+                        '<span class="pageNumber"></span>'
+                        " / "
+                        '<span class="totalPages"></span>'
+                        "</div></div>"
+                    )
+
                     page.pdf(
                         path=str(file_path),
                         format="A4",
                         print_background=True,
                         margin={
-                            "top": "12mm",
+                            "top": "0mm",   # header sempre vuoto: nessun margine sprecato
                             "bottom": "18mm",
                             "left": "0mm",
                             "right": "0mm",
                         },
                         display_header_footer=True,
                         header_template="<span></span>",
-                        footer_template=(
-                            '<div style="font-size:9px;color:#aaa;width:100%;'
-                            'text-align:center;padding:0 20px;">'
-                            '<span class="pageNumber"></span>'
-                            " / "
-                            '<span class="totalPages"></span>'
-                            "</div>"
-                        ),
+                        footer_template=footer_template,
                     )
                     browser.close()
             finally:
