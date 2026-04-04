@@ -8,6 +8,7 @@ import certifi
 import discord
 
 from core.logging_config import _make_handler
+from core import notification_registry
 from plugin.channel.discord_bot.config import config
 from plugin.channel.discord_bot.handlers import setup_handlers
 
@@ -78,10 +79,79 @@ def _build_client() -> discord.Client:
     return client
 
 
+def _resolve_discord_channel_id(http_client: "httpx.Client", token: str, channel_id: str) -> str:
+    """Risolve il nome di un canale Discord al suo ID numerico.
+
+    Se `channel_id` è già numerico lo restituisce invariato.
+    Altrimenti cerca nelle guild del bot il canale con quel nome.
+    """
+    if channel_id.isdigit():
+        return channel_id
+
+    auth_headers = {"Authorization": f"Bot {token}"}
+    # Ottieni tutte le guild del bot
+    guilds_resp = http_client.get(
+        "https://discord.com/api/v10/users/@me/guilds",
+        headers=auth_headers,
+    )
+    guilds_resp.raise_for_status()
+
+    for guild in guilds_resp.json():
+        channels_resp = http_client.get(
+            f"https://discord.com/api/v10/guilds/{guild['id']}/channels",
+            headers=auth_headers,
+        )
+        if channels_resp.status_code != 200:
+            continue
+        for ch in channels_resp.json():
+            # Tipo 0 = canale testuale
+            if ch.get("type") == 0 and ch.get("name") == channel_id:
+                logger.debug("Canale Discord '%s' risolto → ID %s", channel_id, ch["id"])
+                return ch["id"]
+
+    raise ValueError(f"Canale Discord '{channel_id}' non trovato nelle guild del bot")
+
+
+def _make_discord_sender():
+    """Crea e restituisce la funzione di invio notifiche per il notification_registry.
+
+    Usa httpx + certifi per evitare errori SSL su macOS.
+    Supporta sia ID numerici che nomi del canale (risolve automaticamente via API).
+    """
+    import os
+    import httpx
+
+    def sender(channel_id: str, text: str, task_name: str | None) -> bool:
+        token = os.environ.get("DISCORD_TOKEN")
+        if not token:
+            logger.warning("DISCORD_TOKEN non configurato — notifica scheduler Discord non inviata")
+            return False
+        header = f"\u23f0 **Task: {task_name}**\n\n" if task_name else ""
+        message = (header + text)[:2000]
+        try:
+            with httpx.Client(verify=certifi.where(), timeout=30) as client:
+                resolved_id = _resolve_discord_channel_id(client, token, channel_id)
+                resp = client.post(
+                    f"https://discord.com/api/v10/channels/{resolved_id}/messages",
+                    json={"content": message},
+                    headers={"Authorization": f"Bot {token}"},
+                )
+                resp.raise_for_status()
+                return resp.status_code in (200, 201)
+        except Exception as exc:
+            logger.error("Errore invio notifica Discord scheduler: %s", exc)
+            return False
+
+    return sender
+
+
 def start_bot(stop_event: asyncio.Event | None = None) -> None:
     """Entry point sincrono — chiamato dal loader in un thread daemon."""
     global shutdown_event
     shutdown_event = stop_event
+
+    # Registra il sender nel registry centralizzato (usato dallo scheduler)
+    notification_registry.register("discord", _make_discord_sender())
 
     token = os.environ.get("DISCORD_TOKEN")
     if not token:

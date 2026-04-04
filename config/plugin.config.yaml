@@ -21,7 +21,8 @@ tool:
   special: true
 - id: weather_tool
   status: enabled
-
+- id: scheduler_tool
+  status: enabled
 # ── Tool SDK Agno (config inline, nessuna cartella) ──────────────────────
 - id: websearch_tool
   status: enabled

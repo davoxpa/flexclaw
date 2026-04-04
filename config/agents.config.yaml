@@ -245,6 +245,8 @@
         - weather_expert
       knowledge: true
       search_knowledge: true
+      tools:
+        - scheduler_tool
       instructions:
         - >
           MAPPA MEMBRI (usa questi member_id ESATTI per la delega):
@@ -286,6 +288,14 @@
           - Prima di rispondere, CONSULTA la knowledge base per verificare se hai informazioni utili.
           - Se l'utente chiede di salvare/memorizzare contenuti, delega a "file-manager".
         - "Rispondi sempre nella lingua dell'utente."
+        - >
+          SCHEDULING E PROMEMORIA: se l'utente chiede di programmare un messaggio,
+          un promemoria, un task ripetuto o qualsiasi azione futura automatica,
+          usa IMMEDIATAMENTE schedule_task() senza delegare ad altri agenti.
+          Recupera channel_type e chat_id dalla riga '[Canale corrente: ...]' iniettata
+          all'inizio di ogni messaggio. Usa list_tasks() per mostrare i task attivi,
+          pause_task()/resume_task()/delete_task() per gestirli.
+          Conferma SEMPRE con: nome del task, tipo di schedulazione, prossima esecuzione.
       markdown: true
       show_members_responses: true
       share_member_interactions: true

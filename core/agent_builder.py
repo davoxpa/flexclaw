@@ -28,7 +28,7 @@ _TEAM_MODES: dict[str, TeamMode] = {
 
 # Chiavi riservate nei blocchi agent/team, gestite dal builder (non passate al costruttore)
 _AGENT_RESERVED_KEYS = {"tools", "instructions"}
-_TEAM_RESERVED_KEYS = {"members", "instructions", "mode", "knowledge"}
+_TEAM_RESERVED_KEYS = {"members", "instructions", "mode", "knowledge", "tools"}
 
 # Regex per ${variabile} nelle istruzioni
 _VAR_PATTERN = re.compile(r"\$\{(\w+)\}")
@@ -196,6 +196,10 @@ def _build_team(
     teams: dict[str, Team],
     knowledge: Knowledge | None,
     db: Any,
+    builtin_tools: dict[str, dict[str, Any]] | None = None,
+    plugin_tools: list[Toolkit] | None = None,
+    special_tools: dict[str, Toolkit] | None = None,
+    variables: dict[str, str] | None = None,
 ) -> Team:
     """Costruisce un singolo Team dalla configurazione YAML."""
     # Risolve i membri: cerca prima negli agenti, poi nei team (supporta nesting)
@@ -230,20 +234,32 @@ def _build_team(
     # Istruzioni (nessuna variabile ${} nei team, ma supportato per coerenza)
     instructions = team_cfg.get("instructions", [])
 
+    # Risolve i tool del team (seguendo lo stesso meccanismo degli agenti)
+    team_tool_ids = team_cfg.get("tools", [])
+    resolved_team_tools = _resolve_tools(
+        team_tool_ids,
+        builtin_tools or {},
+        plugin_tools or [],
+        special_tools or {},
+        variables,
+    )
+
     team = Team(
         mode=mode,
         model=team_model,
         members=members,
         instructions=instructions,
+        tools=resolved_team_tools if resolved_team_tools else None,
         knowledge=knowledge if use_knowledge else None,
         db=db,
         **extra_params,
     )
     logger.debug(
-        "Team '%s' costruito — modo: %s, membri: %s",
+        "Team '%s' costruito — modo: %s, membri: %s, tool: %d",
         team_cfg.get("name", team_id),
         mode_str,
         [m.name for m in members],
+        len(resolved_team_tools),
     )
     return team
 
@@ -340,6 +356,10 @@ def build_from_yaml(
             teams=built_teams,
             knowledge=knowledge,
             db=db,
+            builtin_tools=builtin_tools_cfg,
+            plugin_tools=plugin_tools or [],
+            special_tools=special_tools or {},
+            variables=variables,
         )
 
     # Identifica il team principale

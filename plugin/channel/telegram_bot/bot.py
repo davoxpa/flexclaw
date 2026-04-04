@@ -15,6 +15,7 @@ from telegram.ext import (
 )
 
 from core.logging_config import _make_handler
+from core import notification_registry
 from plugin.channel.telegram_bot.config import config
 from plugin.channel.telegram_bot.handlers import (
     handle_file,
@@ -102,6 +103,38 @@ def _build_app():
     return app
 
 
+def _make_telegram_sender():
+    """Crea e restituisce la funzione di invio notifiche per il notification_registry.
+
+    Usa urllib (stdlib) — nessuna dipendenza aggiuntiva per il plugin canale.
+    """
+    import os
+    import httpx
+    import certifi
+
+    def sender(chat_id: str, text: str, task_name: str | None) -> bool:
+        token = os.environ.get("TELEGRAM_TOKEN")
+        if not token:
+            logger.warning("TELEGRAM_TOKEN non configurato — notifica scheduler non inviata")
+            return False
+        header = f"\u23f0 *Task: {task_name}*\n\n" if task_name else ""
+        message = (header + text)[:4096]
+        try:
+            # Usa httpx con certifi — stessa libreria SSL usata da python-telegram-bot
+            with httpx.Client(verify=certifi.where(), timeout=30) as client:
+                resp = client.post(
+                    f"https://api.telegram.org/bot{token}/sendMessage",
+                    json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+                )
+                resp.raise_for_status()
+                return True
+        except Exception as exc:
+            logger.error("Errore invio notifica Telegram scheduler: %s", exc)
+            return False
+
+    return sender
+
+
 def start_bot(stop_event: "asyncio.Event | None" = None) -> None:
     """Entry point sincrono — sceglie polling o webhook in base alla config.
 
@@ -110,6 +143,9 @@ def start_bot(stop_event: "asyncio.Event | None" = None) -> None:
     """
     global shutdown_event
     shutdown_event = stop_event
+
+    # Registra il sender nel registry centralizzato (usato dallo scheduler)
+    notification_registry.register("telegram", _make_telegram_sender())
 
     app = _build_app()
     app.add_error_handler(_error_handler)

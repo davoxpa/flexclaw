@@ -122,6 +122,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 file_paths.append(reply_file)
 
     parts = []
+    parts.append(_channel_context(chat_id))
     if reply_ctx:
         parts.append(reply_ctx)
     if inline_parts:
@@ -180,9 +181,10 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     )
 
     # File di testo → contenuto inline; binari → allegato
+    channel_ctx = _channel_context(chat_id)
     text_content = _read_text_file(file_path)
     if text_content is not None:
-        full_message = f"{base_message}\n\n[Contenuto del file {file_path.name}]:\n{text_content}"
+        full_message = f"{channel_ctx}\n\n{base_message}\n\n[Contenuto del file {file_path.name}]:\n{text_content}"
         audit_log(_user_id(user.id if user else None), "file_text_content", {"file": str(file_path)})
         await _stream_and_respond(
             update=update,
@@ -191,9 +193,10 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             session_id=_session_id(chat_id),
         )
     else:
+        full_message = f"{channel_ctx}\n\n{base_message}"
         await _stream_and_respond(
             update=update,
-            message=base_message,
+            message=full_message,
             user_id=_user_id(user.id if user else None),
             session_id=_session_id(chat_id),
             file_paths=[file_path],
@@ -205,6 +208,15 @@ MAX_MSG_LEN = 4096
 
 # Identificativo del canale per il session manager
 _CHANNEL = "tg"
+
+
+def _channel_context(chat_id: int) -> str:
+    """Genera il contesto canale da iniettare nel prompt per lo scheduler.
+
+    Permette all'agent di sapere da quale canale arriva il messaggio
+    e quale chat_id usare quando crea task schedulati.
+    """
+    return f"[Canale corrente: telegram, Chat ID: {chat_id}]"
 
 
 def _session_id(chat_id: int) -> str:
@@ -789,61 +801,6 @@ def _should_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> tuple[b
     return True, text
 
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Gestisce messaggi di testo e li inoltra all'agente AI."""
-    user = update.effective_user
-    if not config.is_user_allowed(user.id if user else None):
-        logger.info("Utente non autorizzato: %s", user.id if user else "unknown")
-        return
-
-    should_reply, text = _should_reply(update, context)
-    if not should_reply:
-        return
-
-    chat_id = update.effective_chat.id
-    username = user.username or user.first_name if user else "unknown"
-    logger.info(
-        "Messaggio ricevuto da %s (id=%s, chat=%d): %s",
-        username,
-        user.id if user else "?",
-        chat_id,
-        text[:200] + "..." if len(text) > 200 else text,
-    )
-
-    # Contesto dal messaggio citato (reply)
-    reply_ctx = _get_reply_context(update.message)
-    file_paths: list[Path] = []
-    inline_parts: list[str] = []
-
-    # Se il reply contiene un file, lo scarica nella sandbox
-    reply = update.message.reply_to_message
-    if reply and (reply.document or reply.photo or reply.audio or reply.video or reply.voice):
-        reply_file = await _download_file_from_message(reply)
-        if reply_file:
-            # File di testo → contenuto inline; binari → allegato
-            text_content = _read_text_file(reply_file)
-            if text_content is not None:
-                inline_parts.append(f"[Contenuto del file {reply_file.name}]:\n{text_content}")
-            else:
-                file_paths.append(reply_file)
-
-    parts = []
-    if reply_ctx:
-        parts.append(reply_ctx)
-    if inline_parts:
-        parts.extend(inline_parts)
-    parts.append(text)
-    full_message = "\n\n".join(parts)
-
-    await _stream_and_respond(
-        update=update,
-        message=full_message,
-        user_id=_user_id(user.id if user else None),
-        session_id=_session_id(chat_id),
-        file_paths=file_paths or None,
-    )
-
-
 async def _download_file_from_message(message) -> Path | None:
     """Scarica il file allegato a un messaggio Telegram e lo salva nella sandbox."""
     if message.photo:
@@ -873,59 +830,3 @@ async def _download_file_from_message(message) -> Path | None:
 async def _download_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Path | None:
     """Scarica il file allegato al messaggio corrente."""
     return await _download_file_from_message(update.message)
-
-
-async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Gestisce messaggi con file allegati e li inoltra all'agente AI."""
-    user = update.effective_user
-    if not config.is_user_allowed(user.id if user else None):
-        logger.info("Utente non autorizzato (file): %s", user.id if user else "unknown")
-        return
-
-    chat_id = update.effective_chat.id
-    caption = update.message.caption or ""
-    username = user.username or user.first_name if user else "unknown"
-
-    file_path = await _download_file(update, context)
-    if not file_path:
-        await update.message.reply_text("Formato file non supportato.")
-        return
-
-    logger.info(
-        "File ricevuto da %s (id=%s, chat=%d): %s caption=%s",
-        username,
-        user.id if user else "?",
-        chat_id,
-        file_path.name,
-        caption[:100] if caption else "",
-    )
-
-    # Contesto dal messaggio citato (reply)
-    reply_ctx = _get_reply_context(update.message)
-    base_message = caption or f"Analizza questo file: {file_path.name}"
-    if reply_ctx:
-        base_message = f"{reply_ctx}\n{base_message}".strip()
-
-    await update.message.reply_text(
-        f"📎 File ricevuto: *{file_path.name}*\nElaborazione in corso…",
-        parse_mode="Markdown",
-    )
-
-    # File di testo → contenuto inline; binari → allegato
-    text_content = _read_text_file(file_path)
-    if text_content is not None:
-        full_message = f"{base_message}\n\n[Contenuto del file {file_path.name}]:\n{text_content}"
-        await _stream_and_respond(
-            update=update,
-            message=full_message,
-            user_id=_user_id(user.id if user else None),
-            session_id=_session_id(chat_id),
-        )
-    else:
-        await _stream_and_respond(
-            update=update,
-            message=base_message,
-            user_id=_user_id(user.id if user else None),
-            session_id=_session_id(chat_id),
-            file_paths=[file_path],
-        )

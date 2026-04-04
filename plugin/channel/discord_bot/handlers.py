@@ -89,6 +89,15 @@ def _user_id(user_id: int | None) -> str:
     return f"dc_user_{user_id}" if user_id else "dc_anonymous"
 
 
+def _channel_context(channel_id: int) -> str:
+    """Genera il contesto canale da iniettare nel prompt per lo scheduler.
+
+    Permette all'agent di sapere da quale canale arriva il messaggio
+    e quale chat_id usare quando crea task schedulati.
+    """
+    return f"[Canale corrente: discord, Chat ID: {channel_id}]"
+
+
 def _snapshot_sandbox() -> dict[Path, float]:
     """Restituisce una mappa file → mtime dei file nella sandbox."""
     if not SANDBOX_DIR.exists():
@@ -362,6 +371,7 @@ def setup_handlers(client: discord.Client, tree: discord.app_commands.CommandTre
         # Contesto dal messaggio citato (reply)
         reply_ctx = _get_reply_context(message)
         parts = []
+        parts.append(_channel_context(message.channel.id))
         if reply_ctx:
             parts.append(reply_ctx)
         parts.append(text)
@@ -414,6 +424,7 @@ def setup_handlers(client: discord.Client, tree: discord.app_commands.CommandTre
         base_message = sanitize_user_input(base_message)
 
         parts = []
+        parts.append(_channel_context(message.channel.id))
         if reply_ctx:
             parts.append(reply_ctx)
         if inline_parts:

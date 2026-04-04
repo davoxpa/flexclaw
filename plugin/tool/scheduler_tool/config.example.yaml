@@ -1,0 +1,9 @@
+id: "scheduler_tool"
+name: "Scheduler Tool"
+description: "Permette di creare e gestire task schedulati che eseguono prompt verso l'agent AI in modo automatico e ripetuto."
+version: "1.0.0"
+author: "Davide Salvato"
+
+# Le agent_instructions vengono raccolte automaticamente dal loader e iniettate
+# nelle istruzioni degli agenti configurati in agents.config.yaml.
+# Vedi config.yaml per la versione attiva con le istruzioni complete.
